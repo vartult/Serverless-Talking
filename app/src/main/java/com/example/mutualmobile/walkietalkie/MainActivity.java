@@ -114,7 +114,7 @@ public class MainActivity extends AppCompatActivity {
 
         SocketHandler.setSocket(socket);
 
-        startActivity(new Intent(getApplicationContext(), ChatWindow.class));
+        //startActivity(new Intent(getApplicationContext(), ChatWindow.class));
       } catch (IOException e) {
         e.printStackTrace();
       }
@@ -171,7 +171,7 @@ public class MainActivity extends AppCompatActivity {
     formGroup.setOnClickListener(new View.OnClickListener() {
       @Override public void onClick(View v) {
         Toast.makeText(getApplicationContext(),"Making Group",Toast.LENGTH_LONG).show();
-        mManager.requestGroupInfo(mChannel, groupInfoListener);
+        startActivity(new Intent(getApplicationContext(), ChatWindow.class));
       }
     });
     // center button position
@@ -384,10 +384,14 @@ public class MainActivity extends AppCompatActivity {
 
   WifiP2pManager.GroupInfoListener groupInfoListener = new WifiP2pManager.GroupInfoListener() {
     @Override public void onGroupInfoAvailable(WifiP2pGroup group) {
+      //ArrayList<WifiP2pDevice> wifiP2pDeviceArrayList = new ArrayList(group.getClientList());
+      //Log.d("MainActivity",wifiP2pDeviceArrayList.get(0).toString());
+      /*
+      * 1. This device is the group owner
+      * 2. All the clients should be connected. (wifiP2pDeviceArrayList list should)
+      */
       if (group.isGroupOwner()) {
-        connectionStatus.setText("HOST");
-        serverClass = new ServerClass();
-        serverClass.start();
+        establishServerConnection();
       } else {
         connectionStatus.setText("CLIENT");
         clientClass = new ClientClass("192.168.49.1");
@@ -395,6 +399,13 @@ public class MainActivity extends AppCompatActivity {
       }
     }
   };
+
+  private void establishServerConnection() {
+    formGroup.setEnabled(true);
+    connectionStatus.setText("HOST");
+    serverClass = new ServerClass();
+    serverClass.start();
+  }
 
   Point generateRandomPosition() {
     Display display = getWindowManager().getDefaultDisplay();

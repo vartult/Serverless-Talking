@@ -42,7 +42,7 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
 
             NetworkInfo networkInfo = intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
             if (networkInfo != null && networkInfo.isConnected()) {
-                Log.d("WifiBroadCast","Search for devices");
+                mManager.requestGroupInfo(mChannel, mActivity.groupInfoListener);
             } else {
                 mActivity.connectionStatus.setText("Device Disconnected");
                 mActivity.clear_all_device_icons();
