@@ -27,7 +27,7 @@ public class MicRecorder implements Runnable {
         }
 
         try {
-            final OutputStream outputStream = SocketHandler.getSocket().getOutputStream();
+            final OutputStream outputStream = SocketHandler.getSocket().socket().getOutputStream();
 
             final byte[] audioBuffer = new byte[bufferSize];
 

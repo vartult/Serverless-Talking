@@ -71,7 +71,7 @@ public class AudioStreamingService extends Service {
                 int offset = 0;
 
                 try {
-                    InputStream inputStream = SocketHandler.getSocket().getInputStream();
+                    InputStream inputStream = SocketHandler.getSocket().socket().getInputStream();
                     int bytes_read = inputStream.read(buffer, 0, bufferSize);
 
                     while(keepPlaying && (bytes_read != -1)) {

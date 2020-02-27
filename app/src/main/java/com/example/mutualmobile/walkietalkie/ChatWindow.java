@@ -33,7 +33,7 @@ public class ChatWindow extends AppCompatActivity implements View.OnClickListene
 
         rippleBackground = (RippleBackground) findViewById(R.id.content);
 
-        Socket socket = SocketHandler.getSocket();
+        Socket socket = SocketHandler.getSocket().socket();
 
         try {
             outputStream = socket.getOutputStream();
@@ -59,7 +59,6 @@ public class ChatWindow extends AppCompatActivity implements View.OnClickListene
                         MicRecorder.keepRecording = true;
                     }
                     t.start();
-
                     // start animation
                     rippleBackground.startRippleAnimation();
 

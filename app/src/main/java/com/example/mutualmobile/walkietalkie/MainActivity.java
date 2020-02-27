@@ -18,8 +18,10 @@ import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pDeviceList;
 import android.net.wifi.p2p.WifiP2pGroup;
+import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Bundle;
+import android.provider.ContactsContract;
 import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -38,10 +40,21 @@ import android.widget.TextView;
 import android.widget.Toast;
 import com.skyfishjy.library.RippleBackground;
 import java.io.IOException;
+import java.lang.reflect.Array;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
+import java.net.UnknownHostException;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+import java.nio.channels.spi.SelectorProvider;
 import java.util.ArrayList;
+import java.util.Arrays;
+import javax.net.ServerSocketFactory;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -65,7 +78,7 @@ public class MainActivity extends AppCompatActivity {
   WifiP2pManager mManager;
   WifiP2pManager.Channel mChannel;
 
-  public static final int PORT_USED = 9584;
+  public static final int PORT_USED = 4149;
 
   BroadcastReceiver mReceiver;
   IntentFilter mIntentFilter;
@@ -76,6 +89,11 @@ public class MainActivity extends AppCompatActivity {
   ClientClass clientClass;
 
   private Menu menu;
+
+  @Override protected void onStart() {
+    formGroup.setEnabled(false);
+    super.onStart();
+  }
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -103,42 +121,69 @@ public class MainActivity extends AppCompatActivity {
   }
 
   public class ServerClass extends Thread {
-    Socket socket;
-    ServerSocket serverSocket;
 
+    DatagramSocket datagramSocket;
+    DatagramPacket datagramPacketsending;
+    DatagramPacket datagramPacketrecieve;
     @Override
     public void run() {
       try {
-        serverSocket = new ServerSocket(PORT_USED);
-        socket = serverSocket.accept();
+        datagramSocket = new DatagramSocket(PORT_USED);
+        byte buf[]={12,13};
+        byte buf1[]= new byte[2];
 
-        SocketHandler.setSocket(socket);
 
-        //startActivity(new Intent(getApplicationContext(), ChatWindow.class));
-      } catch (IOException e) {
+        datagramPacketrecieve= new DatagramPacket(buf1,2);
+        datagramSocket.receive(datagramPacketrecieve);
+        Log.d("MutualMobileServer",Arrays.toString(datagramPacketrecieve.getData()));
+
+        InetAddress address=datagramPacketrecieve.getAddress();
+        int port= datagramPacketrecieve.getPort();
+        datagramPacketsending= new DatagramPacket(buf,2,address,port);
+        datagramSocket.send(datagramPacketsending);
+
+        datagramSocket.close();
+      }
+      catch (SocketException e)
+      {
+        e.printStackTrace();
+      }
+      catch (IOException e) {
         e.printStackTrace();
       }
     }
   }
 
   public class ClientClass extends Thread {
-    Socket socket;
-    String hostAddress;
+    DatagramSocket datagramSocket;
+    DatagramPacket datagramPacket;
+    DatagramPacket datagramPacketsend;
+    InetAddress hostAddress;
 
-    ClientClass(String address) {
-      this.socket = new Socket();
+    ClientClass(InetAddress address) {
       this.hostAddress = address;
     }
 
     @Override
     public void run() {
       try {
-        socket.connect(new InetSocketAddress(hostAddress, PORT_USED), 500);
+        datagramSocket = new DatagramSocket();
+        Log.d("MutualMobile","Client socket generated");
+        byte buf[] = new byte[2];
+        byte send[] = { 13, 18 };
 
-        SocketHandler.setSocket(socket);
+        datagramPacketsend= new DatagramPacket(send,2,hostAddress,PORT_USED);
+        datagramSocket.send(datagramPacketsend);
 
-        startActivity(new Intent(getApplicationContext(), ChatWindow.class));
-      } catch (IOException e) {
+        datagramPacket = new DatagramPacket(buf, 2);
+        datagramSocket.receive(datagramPacket);
+        Log.d("MutualMobileClient",Arrays.toString(datagramPacket.getData()));
+
+        //startActivity(new Intent(getApplicationContext(), ChatWindow.class));
+      } catch (SocketException e) {
+        e.printStackTrace();
+      }
+      catch (IOException e){
         e.printStackTrace();
       }
     }
@@ -156,6 +201,8 @@ public class MainActivity extends AppCompatActivity {
     registerReceiver(mReceiver, mIntentFilter);
   }
 
+
+
   private void initialSetup() {
     // layout files
     connectionStatus = (TextView) findViewById(R.id.connectionStatus);
@@ -170,7 +217,7 @@ public class MainActivity extends AppCompatActivity {
     });
     formGroup.setOnClickListener(new View.OnClickListener() {
       @Override public void onClick(View v) {
-        Toast.makeText(getApplicationContext(),"Making Group",Toast.LENGTH_LONG).show();
+        Toast.makeText(getApplicationContext(), "Making Group", Toast.LENGTH_LONG).show();
         startActivity(new Intent(getApplicationContext(), ChatWindow.class));
       }
     });
@@ -387,14 +434,22 @@ public class MainActivity extends AppCompatActivity {
       //ArrayList<WifiP2pDevice> wifiP2pDeviceArrayList = new ArrayList(group.getClientList());
       //Log.d("MainActivity",wifiP2pDeviceArrayList.get(0).toString());
       /*
-      * 1. This device is the group owner
-      * 2. All the clients should be connected. (wifiP2pDeviceArrayList list should)
-      */
+       * 1. This device is the group owner
+       * 2. All the clients should be connected. (wifiP2pDeviceArrayList list should)
+       */
+
       if (group.isGroupOwner()) {
         establishServerConnection();
       } else {
         connectionStatus.setText("CLIENT");
-        clientClass = new ClientClass("192.168.49.1");
+        //"192.168.49.1" (always remain the same)
+        InetAddress address = null;
+        try {
+          address= InetAddress.getByName("192.168.49.1");
+        } catch (UnknownHostException e) {
+          e.printStackTrace();
+        }
+        clientClass = new ClientClass(address);
         clientClass.start();
       }
     }
